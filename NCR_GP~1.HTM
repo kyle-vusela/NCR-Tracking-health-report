@@ -1,0 +1,1446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NCR GPS Tracking — Weekly Health Report</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#0D1B2A;--ink2:#1A2E42;--gold:#C8962A;--gold-lt:#F0C96A;--gold-bg:#FBF3E3;
+  --ok:#16A34A;--ok-lt:#DCFCE7;--warn:#D97706;--warn-lt:#FEF3C7;
+  --bad:#DC2626;--bad-lt:#FEE2E2;--off:#7C3AED;--off-lt:#EDE9FE;
+  --teal:#0D6E6E;--teal-lt:#CCFBF1;--slate:#475569;--border:#E2E8F0;
+  --bg:#071626;--white:#0D2137;--mid:#90A4AE;--grey-lt:#0A1E33;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:#E8F0F8;font-size:13px;line-height:1.5;}
+.page{max-width:1200px;margin:24px auto;background:#0D2137;box-shadow:0 12px 60px rgba(0,0,0,.5);}
+.edit-banner{background:#071626;border-bottom:2px solid var(--gold);padding:8px 32px;display:flex;align-items:center;gap:12px;font-size:11.5px;color:#B0BEC5;}
+.edit-banner strong{color:var(--gold);font-family:'DM Mono',monospace;letter-spacing:1px;}
+.edit-banner .badge-edit{background:var(--gold);color:#E8F0F8;font-family:'DM Mono',monospace;font-size:9px;font-weight:700;letter-spacing:2px;padding:2px 8px;text-transform:uppercase;}
+.editable{background:rgba(200,150,42,.07);border:1px dashed rgba(200,150,42,.5);border-radius:2px;padding:1px 4px;cursor:text;outline:none;transition:background .15s,border-color .15s;min-width:20px;display:inline-block;}
+.editable:focus{background:rgba(200,150,42,.18);border:1px solid var(--gold);box-shadow:0 0 0 2px rgba(200,150,42,.15);}
+.editable[data-type="number"]{text-align:center;}
+.kpi-input-wrap{position:relative;display:inline-block;}
+input.kpi-num{font-family:'Syne',sans-serif;font-size:36px;font-weight:800;color:#E8F0F8;line-height:1;width:80px;background:rgba(200,150,42,.06);border:1px dashed rgba(200,150,42,.5);border-radius:3px;text-align:center;outline:none;padding:0;transition:background .15s,border-color .15s;-moz-appearance:textfield;}
+input.kpi-num:focus{background:rgba(200,150,42,.16);border-color:var(--gold);}
+input.kpi-num::-webkit-outer-spin-button,input.kpi-num::-webkit-inner-spin-button{-webkit-appearance:none;}
+td input.cell-num{font-family:'DM Mono',monospace;font-size:11.5px;width:46px;text-align:center;background:rgba(200,150,42,.07);border:1px dashed rgba(200,150,42,.4);border-radius:2px;padding:1px 2px;outline:none;color:#E8F0F8;}
+td input.cell-num:focus{background:rgba(200,150,42,.16);border-color:var(--gold);}
+td input.cell-num::-webkit-outer-spin-button,td input.cell-num::-webkit-inner-spin-button{-webkit-appearance:none;}
+td.computed{font-family:'DM Mono',monospace;font-size:11.5px;font-weight:700;color:#E8F0F8;}
+.hdr{background:var(--ink);position:relative;overflow:hidden;display:grid;grid-template-columns:6px 1fr auto;}
+.hdr::before{content:'';position:absolute;top:-40px;right:-60px;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle,rgba(200,150,42,.18),transparent 70%);pointer-events:none;}
+.hdr-accent{background:var(--gold);}
+.hdr-left{padding:24px 32px 22px;}
+.hdr-eyebrow{font-family:'DM Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:rgba(200,150,42,.7);margin-bottom:6px;}
+.hdr-title{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:#FFFFFF;letter-spacing:-.3px;line-height:1.15;}
+.hdr-sub{font-size:11.5px;color:rgba(255,255,255,.42);margin-top:5px;font-style:italic;}
+.hdr-right{padding:24px 32px 22px;display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:5px;}
+.hdr-pill{background:rgba(200,150,42,.15);border:1px solid rgba(200,150,42,.5);color:var(--gold-lt);font-family:'DM Mono',monospace;font-size:9px;font-weight:500;letter-spacing:2px;text-transform:uppercase;padding:3px 10px;}
+.hdr-wk{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--gold);margin-top:4px;}
+.status-bar{background:var(--ink2);padding:10px 32px;display:flex;align-items:center;gap:0;}
+.sb-item{flex:1;display:flex;align-items:center;gap:10px;padding:0 16px 0 0;border-right:1px solid rgba(255,255,255,.08);}
+.sb-item:last-child{border-right:none;padding-right:0;}
+.sb-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.sb-text{font-size:10.5px;color:rgba(255,255,255,.55);}
+.sb-val{font-family:'DM Mono',monospace;font-size:12px;font-weight:500;color:#E8F0F8;}
+.body{padding:28px 32px 44px;}
+.sec-title{font-family:'Syne',sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--gold);margin-bottom:16px;padding-bottom:8px;display:flex;align-items:center;gap:10px;border-bottom:2px solid var(--gold);}
+.sec-title::after{content:'';flex:1;height:1px;background:#1E3A5F;}
+.section{margin-bottom:36px;}
+.kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:28px;}
+.kpi{background:#0A1E33;border:1px solid #1E3A5F;border-top:3px solid var(--ink2);padding:14px 13px 12px;text-align:center;position:relative;overflow:hidden;}
+.kpi.ok{border-top-color:var(--ok);}
+.kpi.warn{border-top-color:var(--warn);}
+.kpi.bad{border-top-color:var(--bad);}
+.kpi.off{border-top-color:var(--off);}
+.kpi.gps{border-top-color:var(--teal);}
+.kpi.nogps{border-top-color:var(--bad);}
+.kpi-lbl{font-family:'DM Mono',monospace;font-size:9px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;color:#90A4AE;margin-bottom:7px;}
+.kpi-unit{font-size:11px;color:#78909C;margin-top:3px;}
+.kpi-pct{font-size:12px;font-weight:700;margin-top:5px;}
+.kpi-pct.ok{color:var(--ok);}
+.kpi-pct.warn{color:var(--warn);}
+.kpi-pct.bad{color:var(--bad);}
+.kpi-pct.off{color:var(--off);}
+.charts-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;}
+.charts-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-bottom:20px;}
+.charts-full{margin-bottom:20px;}
+.chart-card{background:#0A1E33;border:1px solid #1E3A5F;padding:18px 16px 14px;box-shadow:0 2px 10px rgba(0,0,0,.3);}
+.chart-card h3{font-family:'DM Mono',monospace;font-size:10px;font-weight:500;letter-spacing:2px;text-transform:uppercase;color:#90A4AE;margin-bottom:12px;}
+.chart-legend{display:flex;flex-wrap:wrap;gap:12px;font-size:10.5px;color:#B0BEC5;margin-bottom:10px;}
+.chart-legend span{display:flex;align-items:center;gap:5px;}
+.chart-legend .sq{width:10px;height:10px;border-radius:2px;flex-shrink:0;}
+.attn-table{width:100%;border-collapse:collapse;font-size:12.5px;}
+.attn-table thead tr{background:var(--bad);}
+.attn-table thead th{color:var(--white);font-family:'DM Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;padding:9px 12px;text-align:left;white-space:nowrap;}
+.attn-table tbody tr:nth-child(even){background:#0F1E2E;}
+.attn-table tbody tr:hover{background:#1A2D3E;}
+.attn-table tbody td{padding:10px 12px;border-bottom:1px solid #1E3A5F;vertical-align:top;color:#B0BEC5;}
+.attn-table tbody td:first-child{color:#E8F0F8;font-weight:600;}
+.sites-table{width:100%;border-collapse:collapse;font-size:12px;}
+.sites-table thead tr{background:var(--ink);}
+.sites-table thead th{color:rgba(255,255,255,.85);font-family:'DM Mono',monospace;font-size:9px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;padding:9px 12px;text-align:left;white-space:nowrap;}
+.sites-table tbody tr:nth-child(even){background:#0A1E33;}
+.sites-table tbody tr:hover{background:#1A2D3E;}
+.sites-table tbody td{padding:8px 12px;color:#90A4AE;border-bottom:1px solid #1E3A5F;font-size:11.5px;}
+.sites-table tbody td:first-child{color:#E8F0F8;font-weight:600;}
+.badge{display:inline-block;padding:2px 9px;border-radius:3px;font-size:9.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;font-family:'DM Mono',monospace;}
+.badge.ok{background:var(--ok-lt);color:var(--ok);}
+.badge.warn{background:var(--warn-lt);color:var(--warn);}
+.badge.bad{background:var(--bad-lt);color:var(--bad);}
+.badge.off{background:var(--off-lt);color:var(--off);}
+.badge.attn{background:var(--bad-lt);color:var(--bad);}
+.rag{display:inline-block;width:9px;height:9px;border-radius:50%;}
+.rag.ok{background:var(--ok);}
+.rag.warn{background:var(--warn);}
+.rag.bad{background:var(--bad);}
+.rag.off{background:var(--off);}
+.insight{background:#0A1E33;border:1px solid #1E3A5F;border-left:4px solid var(--warn);padding:12px 16px;font-size:11.5px;color:#B0BEC5;font-style:italic;margin-top:14px;}
+.insight.crit{border-left-color:var(--bad);}
+.insight.good{border-left-color:var(--ok);}
+.week-table{width:100%;border-collapse:collapse;font-size:12px;}
+.week-table thead tr{background:var(--ink);}
+.week-table thead th{color:rgba(255,255,255,.85);font-family:'DM Mono',monospace;font-size:9px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;padding:9px 12px;text-align:center;white-space:nowrap;}
+.week-table thead th:first-child{text-align:left;}
+.week-table tbody tr:nth-child(even){background:#0A1E33;}
+.week-table tbody tr:hover{background:#1A2D3E;}
+.week-table tbody td{padding:9px 12px;color:#90A4AE;border-bottom:1px solid #1E3A5F;text-align:center;}
+.week-table tbody td:first-child{color:#E8F0F8;font-weight:600;text-align:left;}
+.week-table tfoot tr{background:var(--ink);}
+.week-table tfoot td{padding:9px 12px;color:var(--gold-lt);font-weight:700;font-family:'DM Mono',monospace;font-size:12px;text-align:center;}
+.week-table tfoot td:first-child{text-align:left;}
+.today-col{background:#0F2A3E!important;}
+.obs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;}
+.obs-box{background:#0A1E33;border:1px solid #1E3A5F;border-top:3px solid var(--warn);padding:14px 15px;}
+.obs-box.crit{border-top-color:var(--bad);}
+.obs-box.good{border-top-color:var(--ok);}
+.obs-box.teal{border-top-color:var(--teal);}
+.obs-box.info{border-top-color:var(--teal);}
+.obs-box strong{display:block;margin-bottom:6px;font-size:12px;color:#E8F0F8;}
+.obs-box p,.obs-box .obs-auto-p{font-size:11.5px;color:#B0BEC5;line-height:1.6;}
+.obs-auto-p{font-size:11.5px;color:#B0BEC5;line-height:1.6;margin-bottom:4px;}
+.ftr{background:var(--ink);padding:13px 32px;display:flex;align-items:center;justify-content:space-between;}
+.ftr-brand{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--gold);letter-spacing:1.5px;text-transform:uppercase;}
+.ftr-info{font-size:10px;color:rgba(255,255,255,.32);text-align:right;line-height:1.8;font-family:'DM Mono',monospace;}
+.attn-editable{background:rgba(200,150,42,.05);border:1px dashed rgba(200,150,42,.4);padding:2px 4px;min-width:60px;display:inline-block;outline:none;border-radius:2px;font-size:12.5px;}
+.attn-editable:focus{background:rgba(200,150,42,.15);border-color:var(--gold);}
+select.sev-select{font-family:'DM Mono',monospace;font-size:9px;padding:2px 4px;border:1px solid #1E3A5F;background:#0A1E33;color:#E8F0F8;border-radius:3px;cursor:pointer;}
+.row-btn{background:none;border:1px solid #1E3A5F;color:#90A4AE;font-size:10px;padding:2px 6px;cursor:pointer;border-radius:2px;font-family:'DM Mono',monospace;}
+.row-btn:hover{background:var(--gold);color:#E8F0F8;border-color:var(--gold);}
+.add-row-wrap{margin-top:8px;}
+@media print{*{-webkit-print-color-adjust:exact!important;color-adjust:exact!important;print-color-adjust:exact!important;}body{background:#071626!important;}.page{box-shadow:none;margin:0;max-width:100%;}.edit-banner{display:none;}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- EDIT MODE BANNER -->
+<div class="edit-banner">
+  <span class="badge-edit">✏ EDIT MODE</span>
+  <span>Click any <strong>gold-outlined field</strong> to edit. KPI cards auto-update from Section 5. All charts update automatically.</span>
+  <span style="margin-left:auto;display:flex;align-items:center;gap:10px;">
+    <span id="lastSaved" style="font-family:'DM Mono',monospace;font-size:9px;color:#90A4AE;"></span>
+    <button id="saveBtn" onclick="saveState()" style="background:var(--gold);color:#E8F0F8;border:none;padding:4px 14px;font-family:'DM Mono',monospace;font-size:10px;font-weight:700;letter-spacing:1px;cursor:pointer;border-radius:2px;">💾 SAVE</button>
+    <button onclick="clearState()" style="background:rgba(220,38,38,.1);color:var(--bad);border:1px solid rgba(220,38,38,.3);padding:4px 10px;font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;border-radius:2px;">↺ RESET</button>
+  </span>
+</div>
+
+<!-- HEADER -->
+<header class="hdr">
+  <div class="hdr-accent"></div>
+  <div class="hdr-left">
+    <div class="hdr-eyebrow">Vusela Risk Services · RTCC · NOC Offsite Monitoring</div>
+    <div class="hdr-title">NCR GPS Tracking Unit<br>Weekly Health Report</div>
+    <div class="hdr-sub">GPS Unit Connectivity · GPS Signal Status · Attention Required Units · Active Site Register</div>
+  </div>
+  <div class="hdr-right">
+    <div class="hdr-pill">Weekly Template</div>
+    <div class="hdr-pill">Confidential</div>
+    <div class="hdr-wk" id="weekLabel">Week of 11 – 17 May 2026</div>
+    <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+      <input type="date" id="weekStart" value="2026-05-11"
+        onchange="refreshHeader()"
+        style="background:rgba(255,255,255,.1);border:1px solid rgba(200,150,42,.4);color:#fff;padding:4px 8px;font-family:'DM Mono',monospace;font-size:10px;border-radius:2px;outline:none;">
+      <button onclick="window.print()"
+        style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);padding:4px 12px;font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;border-radius:2px;">PRINT</button>
+    </div>
+  </div>
+</header>
+
+<!-- STATUS BAR -->
+<div class="status-bar">
+  <div class="sb-item">
+    <div class="sb-dot" style="background:var(--ok)"></div>
+    <div><div class="sb-text">Connectivity: Healthy</div><div class="sb-val" id="sb-healthy">—</div></div>
+  </div>
+  <div class="sb-item">
+    <div class="sb-dot" style="background:var(--bad)"></div>
+    <div><div class="sb-text">Connectivity: Unhealthy</div><div class="sb-val" id="sb-unhealthy">—</div></div>
+  </div>
+  <div class="sb-item">
+    <div class="sb-dot" style="background:var(--off)"></div>
+    <div><div class="sb-text">Switched Off A/H</div><div class="sb-val" id="sb-off">—</div></div>
+  </div>
+  <div class="sb-item">
+    <div class="sb-dot" style="background:var(--teal)"></div>
+    <div><div class="sb-text">GPS Status: OK</div><div class="sb-val" id="sb-gps">—</div></div>
+  </div>
+  <div class="sb-item">
+    <div class="sb-dot" style="background:var(--bad)"></div>
+    <div><div class="sb-text">No GPS Data</div><div class="sb-val" id="sb-nogps">—</div></div>
+  </div>
+  <div class="sb-item">
+    <div class="sb-dot" style="background:var(--warn)"></div>
+    <div><div class="sb-text">Attention Required</div><div class="sb-val" id="sb-attn">—</div></div>
+  </div>
+  <div class="sb-item">
+    <div class="sb-dot" style="background:var(--ok)"></div>
+    <div><div class="sb-text">Active Sites</div><div class="sb-val" id="sb-sites">—</div></div>
+  </div>
+</div>
+
+<!-- BODY -->
+<div class="body">
+
+  <!-- 1. KPI CARDS -->
+  <div class="section">
+    <div class="sec-title">1 &nbsp; Daily Health Snapshot — <span id="snapDate">13 May 2026</span></div>
+    <div class="kpi-grid">
+      <div class="kpi ok">
+        <div class="kpi-lbl">Healthy</div>
+        <div class="kpi-num" id="k-healthy" style="font-family:'Syne',sans-serif;font-size:36px;font-weight:800;color:#E8F0F8;line-height:1;text-align:center;padding:4px 0;">0</div>
+        <div class="kpi-unit">Units connected</div>
+        <div class="kpi-pct ok" id="kp-healthy">0% of fleet</div>
+      </div>
+      <div class="kpi bad">
+        <div class="kpi-lbl">Unhealthy</div>
+        <div class="kpi-num" id="k-unhealthy" style="font-family:'Syne',sans-serif;font-size:36px;font-weight:800;color:#E8F0F8;line-height:1;text-align:center;padding:4px 0;">0</div>
+        <div class="kpi-unit">Units offline</div>
+        <div class="kpi-pct bad" id="kp-unhealthy">0% of fleet</div>
+      </div>
+      <div class="kpi off">
+        <div class="kpi-lbl">Switched Off A/H</div>
+        <div class="kpi-num" id="k-off" style="font-family:'Syne',sans-serif;font-size:36px;font-weight:800;color:#E8F0F8;line-height:1;text-align:center;padding:4px 0;">0</div>
+        <div class="kpi-unit">Units after-hours</div>
+        <div class="kpi-pct off" id="kp-off">0% of fleet</div>
+      </div>
+      <div class="kpi gps">
+        <div class="kpi-lbl">GPS OK</div>
+        <div class="kpi-num" id="k-gps" style="font-family:'Syne',sans-serif;font-size:36px;font-weight:800;color:#E8F0F8;line-height:1;text-align:center;padding:4px 0;">0</div>
+        <div class="kpi-unit">Reporting GPS</div>
+        <div class="kpi-pct ok" id="kp-gps">0% of fleet</div>
+      </div>
+      <div class="kpi nogps">
+        <div class="kpi-lbl">No GPS Data</div>
+        <div class="kpi-num" id="k-nogps" style="font-family:'Syne',sans-serif;font-size:36px;font-weight:800;color:#E8F0F8;line-height:1;text-align:center;padding:4px 0;">0</div>
+        <div class="kpi-unit">No position data</div>
+        <div class="kpi-pct bad" id="kp-nogps">0% of fleet</div>
+      </div>
+      <div class="kpi warn">
+        <div class="kpi-lbl">Attention Required</div>
+        <div class="kpi-num" id="k-attn" style="font-family:'Syne',sans-serif;font-size:36px;font-weight:800;color:#E8F0F8;line-height:1;text-align:center;padding:4px 0;">0</div>
+        <div class="kpi-unit">Action items open</div>
+        <div class="kpi-pct warn" id="kp-attn">Escalate today</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. CHARTS -->
+  <div class="section">
+    <div class="sec-title">2 &nbsp; Visual Analysis — Overlaid Charts</div>
+    <div class="charts-2">
+      <div class="chart-card">
+        <h3>GPS Unit Connectivity</h3>
+        <div class="chart-legend">
+          <span><span class="sq" style="background:var(--ok)"></span><span id="leg-healthy">Healthy</span></span>
+          <span><span class="sq" style="background:var(--bad)"></span><span id="leg-unhealthy">Unhealthy</span></span>
+          <span><span class="sq" style="background:var(--off)"></span><span id="leg-off">Switched Off A/H</span></span>
+        </div>
+        <div style="position:relative;height:220px;"><canvas id="cConn"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3>GPS Signal Status</h3>
+        <div class="chart-legend">
+          <span><span class="sq" style="background:var(--ok)"></span><span id="leg-gps">GPS OK</span></span>
+          <span><span class="sq" style="background:var(--bad)"></span><span id="leg-nogps">No GPS Data</span></span>
+        </div>
+        <div style="position:relative;height:220px;"><canvas id="cGps"></canvas></div>
+      </div>
+    </div>
+    <div class="charts-3">
+      <div class="chart-card">
+        <h3>Fleet Status Breakdown</h3>
+        <div style="position:relative;height:200px;"><canvas id="cFleet"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3>Attention Unit — Issue Type</h3>
+        <div class="chart-legend">
+          <span><span class="sq" style="background:var(--bad)"></span>Critical (offline/damage)</span>
+          <span><span class="sq" style="background:var(--warn)"></span>Warning (power/no move)</span>
+        </div>
+        <div style="position:relative;height:200px;"><canvas id="cAttn"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3>Today: Health vs Issues Ratio</h3>
+        <div class="chart-legend">
+          <span><span class="sq" style="background:var(--ok)"></span>Healthy</span>
+          <span><span class="sq" style="background:var(--bad)"></span>Unhealthy</span>
+          <span><span class="sq" style="background:var(--off)"></span>Switched Off</span>
+          <span><span class="sq" style="background:var(--warn)"></span>No GPS</span>
+        </div>
+        <div style="position:relative;height:200px;"><canvas id="cRatio"></canvas></div>
+      </div>
+    </div>
+    <div class="charts-full">
+      <div class="chart-card">
+        <h3>Weekly Fleet Health Trend — Healthy Units + Attention Count Overlaid</h3>
+        <div class="chart-legend">
+          <span><span class="sq" style="background:var(--ok)"></span>Healthy Units (bar)</span>
+          <span><span class="sq" style="background:var(--bad)"></span>Unhealthy Units (bar)</span>
+          <span><span class="sq" style="background:var(--off)"></span>Switched Off A/H (bar)</span>
+          <span><span class="sq" style="background:#0D6E6E"></span>GPS OK (line — overlaid)</span>
+          <span><span class="sq" style="background:var(--warn)"></span>Attention Required (line — overlaid)</span>
+        </div>
+        <div style="position:relative;height:240px;"><canvas id="cWeekly"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. WEEKLY TRACKER TABLE -->
+  <div class="section">
+    <div class="sec-title">3 &nbsp; Weekly Health Tracker — <span id="weekRange">11–17 May 2026</span></div>
+    <table class="week-table">
+      <thead>
+        <tr>
+          <th style="text-align:left;">Metric</th>
+          <th id="th-0">Mon 11</th>
+          <th id="th-1">Tue 12</th>
+          <th id="th-2">Wed 13 ★</th>
+          <th id="th-3">Thu 14</th>
+          <th id="th-4">Fri 15</th>
+          <th id="th-5">Sat 16</th>
+          <th id="th-6">Sun 17</th>
+          <th>Week Total / Avg</th>
+        </tr>
+      </thead>
+      <tbody id="weekTableBody"></tbody>
+      <tfoot>
+        <tr>
+          <td>Week Total — Attention Units</td>
+          <td id="tf-0">—</td><td id="tf-1">—</td><td id="tf-2">—</td><td id="tf-3">—</td>
+          <td id="tf-4">—</td><td id="tf-5">—</td><td id="tf-6">—</td>
+          <td id="tf-total" class="computed">—</td>
+        </tr>
+      </tfoot>
+    </table>
+    <div class="insight">
+      ℹ &nbsp;<strong>How to use:</strong> Enter values for each day. The current report day (★) auto-populates from Section 5 Active Sites Register. % rows compute automatically. Week totals and averages update as you type. Data persists per week — changing the week date creates a fresh tracker while preserving historical weeks.
+    </div>
+  </div>
+
+  <!-- 4. ATTENTION REQUIRED -->
+  <div class="section">
+    <div class="sec-title">4 &nbsp; Attention Required Units — <span id="attnDate">13 May 2026</span></div>
+    <table class="attn-table" id="attnTable">
+      <thead>
+        <tr>
+          <th>Unit Reference</th>
+          <th>Site Name</th>
+          <th>Issue Type</th>
+          <th>Detail</th>
+          <th>Severity</th>
+          <th>Action Required</th>
+          <th style="width:36px;"></th>
+        </tr>
+      </thead>
+      <tbody id="attnBody"></tbody>
+    </table>
+    <div class="add-row-wrap">
+      <button class="row-btn" onclick="addAttnRow()">+ Add Unit</button>
+    </div>
+  </div>
+
+  <!-- 5. ACTIVE SITES REGISTER -->
+  <div class="section">
+    <div class="sec-title">5 &nbsp; Active Sites Register — <span id="siteCount">0</span> Sites Monitored</div>
+    <table class="sites-table" id="sitesTable">
+      <thead>
+        <tr>
+          <th>Unit Reference</th><th>Site Name</th><th>Address</th><th>Status</th><th style="width:36px;"></th>
+        </tr>
+      </thead>
+      <tbody id="sitesBody"></tbody>
+    </table>
+    <div class="add-row-wrap">
+      <button class="row-btn" onclick="addSiteRow()">+ Add Site</button>
+    </div>
+  </div>
+
+  <!-- 6. KEY OBSERVATIONS -->
+  <div class="section">
+    <div class="sec-title">6 &nbsp; Key Observations &amp; Action Items</div>
+
+    <!-- AUTO-GENERATED OBSERVATION BLOCKS (fed from Sections 4 & 5) -->
+    <div class="obs-grid" id="obsAutoGrid" style="margin-bottom:16px;">
+
+      <!-- AUTO: Amber units from Section 4 -->
+      <div class="obs-box" id="obs-amber">
+        <strong>🟡 Amber Units — Monitor &amp; Confirm</strong>
+        <div id="obs-amber-content"><p class="obs-auto-p" style="font-style:italic;color:#B0BEC5;">No amber units at this time.</p></div>
+      </div>
+
+      <!-- AUTO: Offline / Critical from Section 4 + 5 -->
+      <div class="obs-box crit" id="obs-offline">
+        <strong>🔴 Offline / Critical Units</strong>
+        <div id="obs-offline-content"><p class="obs-auto-p" style="font-style:italic;color:#B0BEC5;">No offline or critical units at this time.</p></div>
+      </div>
+
+      <!-- AUTO: GPS Signal Health -->
+      <div class="obs-box teal" id="obs-gps">
+        <strong>📡 GPS Signal Health</strong>
+        <div id="obs-gps-content"><p class="obs-auto-p" style="font-style:italic;color:#B0BEC5;">Loading GPS data...</p></div>
+      </div>
+
+      <!-- AUTO: Fleet Health Positive (existing, now also auto-updates) -->
+      <div class="obs-box good">
+        <strong id="obsGoodTitle">🟢 Fleet Health — Positive</strong>
+        <p id="obsGoodText" style="font-size:11.5px;color:#B0BEC5;line-height:1.6;">Loading fleet data...</p>
+      </div>
+
+      <!-- AUTO: Switched Off A/H summary -->
+      <div class="obs-box" id="obs-switchedoff" style="border-top-color:var(--off);">
+        <strong>🔵 Switched Off After-Hours</strong>
+        <div id="obs-switchedoff-content"><p class="obs-auto-p" style="font-style:italic;color:#B0BEC5;">No switched-off units at this time.</p></div>
+      </div>
+
+      <!-- AUTO: Fleet Size / Site Count -->
+      <div class="obs-box info" id="obs-fleet">
+        <strong>📊 Fleet Overview</strong>
+        <div id="obs-fleet-content"><p class="obs-auto-p" style="font-style:italic;color:#B0BEC5;">Loading fleet overview...</p></div>
+      </div>
+
+    </div>
+
+    <!-- MANUALLY ADDED OBSERVATION BOXES -->
+    <div class="obs-grid" id="obsGrid"></div>
+    <div style="margin-top:12px;">
+      <button class="row-btn" onclick="addObsBox()">+ Add Custom Observation</button>
+    </div>
+  </div>
+
+</div><!-- /body -->
+
+<footer class="ftr">
+  <div class="ftr-brand">Vusela Risk Services (Pty) Ltd</div>
+  <div class="ftr-info">
+    Reg No: 2005/042739/07 · PSIRA Reg: 2081998 · Client: NCR Corporation<br>
+    Weekly GPS Health Report · NOC Offsite Monitoring · CONFIDENTIAL
+  </div>
+</footer>
+
+</div><!-- /page -->
+
+<script>
+// ═══════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════
+const COLOR = {OK:'#16A34A',BAD:'#DC2626',WARN:'#D97706',OFF:'#7C3AED',TEAL:'#0D6E6E',NAVY:'#0D1B2A',GOLD:'#C8962A'};
+const STORAGE_KEY = 'ncr_gps_report_v3';
+const DAY_NAMES = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+const WEEK_ROWS = [
+  {id:'total',   label:'Total Units Monitored', color:'#E8F0F8'},
+  {id:'healthy', label:'✅ Healthy Units',       color:'var(--ok)'},
+  {id:'unhlth',  label:'❌ Unhealthy Units',     color:'var(--bad)'},
+  {id:'off',     label:'🔴 Switched Off A/H',   color:'var(--off)'},
+  {id:'gps',     label:'📡 GPS OK',             color:'var(--teal)'},
+  {id:'nogps',   label:'⚠ No GPS Data',         color:'var(--bad)'},
+  {id:'attn',    label:'🚨 Attention Required',  color:'var(--warn)'},
+  {id:'health%', label:'% Health Rate',         color:'var(--ok)',  pct:true},
+  {id:'gps%',    label:'% GPS OK Rate',         color:'var(--teal)',pct:true},
+];
+
+// ═══════════════════════════════════════════════════════
+// WORKING DATA
+// ═══════════════════════════════════════════════════════
+function emptyWeek() {
+  return {
+    total:  [null,null,null,null,null,null,null],
+    healthy:[null,null,null,null,null,null,null],
+    unhlth: [null,null,null,null,null,null,null],
+    off:    [null,null,null,null,null,null,null],
+    gps:    [null,null,null,null,null,null,null],
+    nogps:  [null,null,null,null,null,null,null],
+    attn:   [null,null,null,null,null,null,null],
+  };
+}
+
+let weekData    = emptyWeek();
+let allWeekData = {};          // keyed by weekStart string e.g. "2026-05-11"
+let currentWeekKey = '2026-05-11';
+let attnRows    = [];
+let sitesRows   = [];
+let charts      = {};
+
+// Computed dynamically — index 0=Mon … 6=Sun
+// Report covers PREVIOUS day's data (produced the following day)
+function getReportDayIdx() {
+  const ws = document.getElementById('weekStart').value;
+  if (!ws) return 2;
+  const weekStart = new Date(ws + 'T00:00:00');
+  const today = new Date(); today.setHours(0,0,0,0);
+  weekStart.setHours(0,0,0,0);
+  const diff = Math.floor((today - weekStart) / 86400000);
+  const rdi = diff - 1; // yesterday = report day
+  if (rdi >= 0 && rdi <= 6) return rdi;
+  return 2; // fallback to Wednesday
+}
+
+// ═══════════════════════════════════════════════════════
+// DEFAULTS
+// ═══════════════════════════════════════════════════════
+const DEFAULTS = {
+  weekStart: '2026-05-11',
+  // Full 7-day data for week 11–17 May 2026 (from report dated 17 May 2026)
+  // Indices: 0=Mon11, 1=Tue12, 2=Wed13, 3=Thu14, 4=Fri15, 5=Sat16, 6=Sun17
+  weekData: {
+    total:  [32, 32, 35, 32, 35, 35, 35],
+    healthy:[29, 30, 32, 28, 32, 30, 32],
+    unhlth: [2, null, 2, 2, 3, 4, 2],
+    off:    [1, 2, 1, 2, 1, 1, 1],
+    gps:    [29, 32, 32, 28, 32, 30, 32],
+    nogps:  [3, 2, 3, 4, 3, 5, 3],
+    attn:   [3, 2, 3, 4, 3, 5, 3],
+  },
+  attnRows: [
+    {ref:'NCRB3431', site:'NCR Family Mart Hyper',       issue:'Power Disconnect',
+     detail:'Main power disconnected by merchant. Restores next business opening.',
+     sev:'warn', action:'Monitor — expected to restore on next opening'},
+    {ref:'SASB1824', site:'NCR Mnguni Supermarket 2',    issue:'Offline',
+     detail:'Unit is offline, however the store reported that the plugs are on and another ATM is operational.',
+     sev:'bad',  action:'ATM units need to be inspected for electrical fault'},
+    {ref:'SASB2981', site:'NCR PK Stores',               issue:'Offline',
+     detail:'Unit is offline, merchant reported that there is a fault on the device and they switched off power to the unit.',
+     sev:'bad',  action:'NCR Technical need to investigate the ATM unit'},
+  ],
+  sitesRows: [
+    // ── 31 existing sites (statuses updated per 17 May 2026 report) ──
+    {ref:'NCRB3857',  name:'NCR Blue Market Retail',                  addr:'A16562 St, Reefentse B, Reefentse 0424, Gauteng',                          status:'ok',   statusLabel:'Active'},
+    {ref:'SASB2427',  name:'NCR BP Rosslyn',                          addr:'Piet Rautenbach St, Rosslyn, Akasia 0200, Gauteng',                        status:'ok',   statusLabel:'Active'},
+    {ref:'NCRB2606',  name:'NCR Chris Ann Supermarket',               addr:'Ga-Motle, North West, South Africa',                                       status:'ok',   statusLabel:'Active'},
+    {ref:'SASB3061',  name:'NCR DR Kwinda Centre',                    addr:'Moeding St, Soshanguve Gg, Soshanguve 0152, Gauteng',                      status:'ok',   statusLabel:'Active'},
+    {ref:'SASB3041',  name:'NCR Ebony Lifestyle Butchery',            addr:'Tibouchina St 3, Ebony Park, Midrand 1632, Gauteng',                       status:'ok',   statusLabel:'Active'},
+    {ref:'NCRB1453',  name:'NCR Engen Plane Road Service Station',    addr:'Kelvin St 1, Spartan, Kempton Park 1619, Gauteng',                         status:'ok',   statusLabel:'Active'},
+    {ref:'NCRB3431',  name:'NCR Family Mart Hyper',                   addr:'Old Pretoria Main Rd, Halfway House, Midrand 1685, Gauteng',               status:'warn', statusLabel:'Power Disconnect'},
+    {ref:'SASB1337',  name:'NCR Freshstop Excelsior',                 addr:'Sonheuwel, Die Hoewes, Centurion 0157, Gauteng',                           status:'ok',   statusLabel:'Active'},
+    {ref:'SASB2243',  name:'NCR Kaalfontein Supermarket',             addr:'Blue Acara St 32, Kaalfontein Ext 1, Midrand 1632, Gauteng',               status:'ok',   statusLabel:'Active'},
+    {ref:'NCRB1604',  name:'NCR Lebanon Complex',                     addr:'A16541 St, Beirut, Mabopane 0190, Gauteng',                                status:'ok',   statusLabel:'Active'},
+    {ref:'NCRB0773',  name:'NCR Mnguni Supermarket 1',                addr:'21St March St 46, Moriting, Tembisa 1632, Gauteng',                        status:'ok',   statusLabel:'Active'},
+    {ref:'SASB1824',  name:'NCR Mnguni Supermarket 2',                addr:'21St March St 49, Moriting, Tembisa 1632, Gauteng',                        status:'bad',  statusLabel:'Offline'},
+    {ref:'NCRB1489',  name:'NCR Pick n Pay Busy Corner',              addr:'Main Rd, Ebony Park, Midrand 1632, Gauteng',                               status:'ok',   statusLabel:'Active'},
+    {ref:'NCRB1490',  name:'NCR Pick n Pay Busy Corner 2',            addr:'Main Rd, Ebony Park, Midrand 1632, Gauteng',                               status:'ok',   statusLabel:'Active'},
+    {ref:'SASB2910',  name:'NCR Kayleah Market',                      addr:'Makhosini Dr, Soshanguve Hh, Soshanguve 0152, Gauteng',                    status:'ok',   statusLabel:'Active'},
+    {ref:'SASB1685',  name:'NCR Pick n Pay Liquors Bophelong 1',      addr:'Cnr October and Marinda square, Ivory park',                              status:'ok',   statusLabel:'Active'},
+    {ref:'SASB1686',  name:'NCR Pick n Pay Liquors Bophelong 2',      addr:'Cnr October and Marinda square, Ivory park',                              status:'ok',   statusLabel:'Active'},
+    {ref:'SASB3276',  name:'NCR Pick n Pay Liquors Bophelong 3',      addr:'Cnr October and Marinda square, Ivory park',                              status:'ok',   statusLabel:'Active'},
+    {ref:'SASB0891',  name:'NCR Pick n Pay Tembisa',                  addr:'Andrew Mapheto Dr 129, Endulweni, Tembisa 1632, Gauteng',                  status:'ok',   statusLabel:'Active'},
+    {ref:'SASB2981',  name:'NCR PK Stores',                           addr:'High Rd 91A, Eastleigh, Edenvale 1609, Gauteng',                           status:'bad',  statusLabel:'Offline'},
+    {ref:'SASB1419',  name:'NCR Savemore van der Hoff 1',             addr:'Van Der Hoff Rd 1293, Kirkney, Pretoria 0019, Gauteng',                    status:'ok',   statusLabel:'Active'},
+    {ref:'SASB3032',  name:'NCR Savemore van der Hoff 2',             addr:'Van Der Hoff Rd 1293, Kirkney, Pretoria 0019, Gauteng',                    status:'ok',   statusLabel:'Active'},
+    {ref:'NCRB2932',  name:'NCR Shazz Corner',                        addr:'A20177 St, Soshanguve P, Soshanguve 0152, Gauteng',                        status:'ok',   statusLabel:'Active'},
+    {ref:'NCRB3217',  name:'NCR Sodumase Dealer and Butcher 2',       addr:'Lusaka St 69, Vusimuzi, Tembisa 1632, Gauteng',                            status:'ok',   statusLabel:'Active'},
+    {ref:'SASB26271', name:'NCR Sodumase General Dealer',             addr:'Lusaka St 69, Vusimuzi, Tembisa 1632, Gauteng',                            status:'ok',   statusLabel:'Active'},
+    {ref:'NCRB3304',  name:'NCR Spar Randjes',                        addr:'Nyala St 18, Randjespark, Midrand 1685, Gauteng',                          status:'ok',   statusLabel:'Active'},
+    {ref:'NCRB1566',  name:'NCR USave More Supermarket',              addr:'D M Marokane Dr 62, Maokeng, Tembisa 1632, Gauteng',                       status:'ok',   statusLabel:'Active'},
+    {ref:'SASB2694',  name:'Rosslyn Take Aways',                      addr:'De Waal St, Rosslyn, Akasia 0200, Gauteng',                                status:'ok',   statusLabel:'Active'},
+    {ref:'SASB3244',  name:'Sizabantu Supermarket',                   addr:'A17750 St, Reefentse B, Reefentse 0424, Gauteng',                          status:'ok',   statusLabel:'Active'},
+    {ref:'SASB3571',  name:'NCR Morgan Square',                       addr:'Mackenzie Pl 33, Lenasia South Ext 4, Lenasia South',                      status:'ok',   statusLabel:'Active'},
+    {ref:'SASB2955',  name:'NCR Papata Shopping Centre',              addr:'A19552 St, Ga-Rankuwa, Tsebe 0190, Gauteng',                              status:'ok',   statusLabel:'Active'},
+    // ── 4 new sites added in 17 May 2026 report ──
+    {ref:'SASB1874',  name:'NCR Mr. Chips',                           addr:'Cnr Market & South street, Halfway house',                                 status:'ok',   statusLabel:'Active'},
+    {ref:'NCRB1290',  name:'NCR Ven General Dealer',                  addr:'706 Rietduiker Road, Midrand',                                             status:'ok',   statusLabel:'Active'},
+    {ref:'NCRB3346',  name:'NCR Jobe Lifestyle',                      addr:'503 South Africa Boulevard, Far East Bank, Alexandra',                    status:'ok',   statusLabel:'Active'},
+    {ref:'SASB1769',  name:'NCR Pick n Pay The Orchards',             addr:'253 Louis Botha Avenue, Orchards',                                         status:'ok',   statusLabel:'Active'},
+  ],
+  obs: [],
+};
+
+// ═══════════════════════════════════════════════════════
+// DERIVE KPI VALUES FROM SITES REGISTER  (Fix #1)
+// Status mapping: ok=Healthy, warn=Warning(amber), bad=Offline, off=SwitchedOff
+// GPS: ok = GPS reporting; warn/bad/off = No GPS Data (all count as no signal)
+// ═══════════════════════════════════════════════════════
+function computeKpiFromSites() {
+  const healthy    = sitesRows.filter(r => r.status === 'ok').length;
+  const unhealthy  = sitesRows.filter(r => r.status === 'bad').length;
+  const switchedOff= sitesRows.filter(r => r.status === 'off').length;
+  // warn sites are amber — connected but with issues (power disconnect etc.)
+  // GPS: only 'ok' = GPS reporting; warn/bad/off all = No GPS Data
+  const gpsOk  = sitesRows.filter(r => r.status === 'ok').length;
+  const noGps  = sitesRows.filter(r => r.status === 'warn' || r.status === 'bad' || r.status === 'off').length;
+  const attn   = attnRows.length;
+
+  setKpiDisplay('k-healthy',   healthy);
+  setKpiDisplay('k-unhealthy', unhealthy);
+  setKpiDisplay('k-off',       switchedOff);
+  setKpiDisplay('k-gps',       gpsOk);
+  setKpiDisplay('k-nogps',     noGps);
+  setKpiDisplay('k-attn',      attn);
+
+  updateAll();
+}
+
+function setKpiDisplay(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+  el._value = val; // store numeric value for getKpiValues()
+}
+
+// ═══════════════════════════════════════════════════════
+// READ KPI VALUES (from display elements, not inputs)
+// ═══════════════════════════════════════════════════════
+function getKpiValues() {
+  const g = id => parseInt(document.getElementById(id)?._value ?? document.getElementById(id)?.textContent ?? 0) || 0;
+  const healthy   = g('k-healthy');
+  const unhealthy = g('k-unhealthy');
+  const off       = g('k-off');
+  const gps       = g('k-gps');
+  const nogps     = g('k-nogps');
+  const attn      = g('k-attn');
+  const total     = healthy + unhealthy + off;
+  const gpsTotal  = gps + nogps;
+  return {healthy,unhealthy,off,gps,nogps,attn,total,gpsTotal};
+}
+
+function pct(n,d){return d>0?Math.round(n/d*100):0;}
+
+// ═══════════════════════════════════════════════════════
+// UPDATE ALL DEPENDENTS FROM KPI VALUES
+// ═══════════════════════════════════════════════════════
+function updateAll() {
+  const v = getKpiValues();
+  const {healthy,unhealthy,off,gps,nogps,attn,total,gpsTotal} = v;
+
+  // Percentage labels on KPI cards
+  document.getElementById('kp-healthy').textContent   = pct(healthy,total)+'% of fleet';
+  document.getElementById('kp-unhealthy').textContent = pct(unhealthy,total)+'% of fleet';
+  document.getElementById('kp-off').textContent       = pct(off,total)+'% of fleet';
+  document.getElementById('kp-gps').textContent       = pct(gps,gpsTotal)+'% of fleet';
+  document.getElementById('kp-nogps').textContent     = pct(nogps,gpsTotal)+'% of fleet';
+
+  // Status bar
+  document.getElementById('sb-healthy').textContent   = healthy+' · '+pct(healthy,total)+'%';
+  document.getElementById('sb-unhealthy').textContent = unhealthy+' · '+pct(unhealthy,total)+'%';
+  document.getElementById('sb-off').textContent       = off+' · '+pct(off,total)+'%';
+  document.getElementById('sb-gps').textContent       = gps+' · '+pct(gps,gpsTotal)+'%';
+  document.getElementById('sb-nogps').textContent     = nogps+' · '+pct(nogps,gpsTotal)+'%';
+  document.getElementById('sb-attn').textContent      = attn+' units';
+
+  // Chart legends
+  document.getElementById('leg-healthy').textContent  = `Healthy (${healthy} · ${pct(healthy,total)}%)`;
+  document.getElementById('leg-unhealthy').textContent= `Unhealthy (${unhealthy} · ${pct(unhealthy,total)}%)`;
+  document.getElementById('leg-off').textContent      = `Switched Off A/H (${off} · ${pct(off,total)}%)`;
+  document.getElementById('leg-gps').textContent      = `GPS OK (${gps} · ${pct(gps,gpsTotal)}%)`;
+  document.getElementById('leg-nogps').textContent    = `No GPS Data (${nogps} · ${pct(nogps,gpsTotal)}%)`;
+
+  if (charts.conn) {
+    charts.conn.data.datasets[0].data = [healthy,unhealthy,off];
+    charts.conn.data.labels = [`Healthy (${pct(healthy,total)}%)`,`Unhealthy (${pct(unhealthy,total)}%)`,`Switched Off A/H (${pct(off,total)}%)`];
+    charts.conn.update();
+  }
+  if (charts.gps) {
+    charts.gps.data.datasets[0].data = [gps,nogps];
+    charts.gps.data.labels = [`GPS OK (${pct(gps,gpsTotal)}%)`,`No GPS Data (${pct(nogps,gpsTotal)}%)`];
+    charts.gps.update();
+  }
+  if (charts.fleet) {
+    charts.fleet.data.datasets[0].data = [healthy,unhealthy,off,nogps];
+    charts.fleet.update();
+  }
+  if (charts.ratio) {
+    charts.ratio.data.labels = ['Fleet ('+total+' units)'];
+    charts.ratio.data.datasets[0].data = [healthy];
+    charts.ratio.data.datasets[1].data = [unhealthy];
+    charts.ratio.data.datasets[2].data = [off];
+    charts.ratio.data.datasets[3].data = [nogps];
+    charts.ratio.update();
+  }
+
+  // Only auto-sync report day column when viewing the CURRENT week
+  // (prevents overwriting historical data when browsing past weeks)
+  const _ws = document.getElementById('weekStart').value;
+  const _weekStart = new Date(_ws + 'T00:00:00'); _weekStart.setHours(0,0,0,0);
+  const _today = new Date(); _today.setHours(0,0,0,0);
+  const _diff = Math.floor((_today - _weekStart) / 86400000);
+  const _isCurrentWeek = _diff >= 0 && _diff <= 6;
+  if (_isCurrentWeek) {
+    const rdi = getReportDayIdx();
+    weekData.total[rdi]   = total;
+    weekData.healthy[rdi] = healthy;
+    weekData.unhlth[rdi]  = unhealthy;
+    weekData.off[rdi]     = off;
+    weekData.gps[rdi]     = gps;
+    weekData.nogps[rdi]   = nogps;
+    weekData.attn[rdi]    = attn;
+  }
+
+  if (charts.weekly) {
+    charts.weekly.data.datasets[0].data = [...weekData.healthy];
+    charts.weekly.data.datasets[1].data = [...weekData.unhlth];
+    charts.weekly.data.datasets[2].data = [...weekData.off];
+    charts.weekly.data.datasets[3].data = [...weekData.gps];
+    charts.weekly.data.datasets[4].data = [...weekData.attn];
+    charts.weekly.update();
+  }
+
+  refreshWeekTable();
+  updateObservations();
+}
+
+// ═══════════════════════════════════════════════════════
+// HEADER DATE REFRESH  (Fix #2, #4 — auto-updates all date fields)
+// ═══════════════════════════════════════════════════════
+function refreshHeader() {
+  const ws = document.getElementById('weekStart').value;
+  if (!ws) return;
+  const d = new Date(ws + 'T00:00:00');
+  if (isNaN(d.getTime())) return;
+  const e = new Date(d); e.setDate(e.getDate() + 6);
+
+  const fLong  = dt => dt.toLocaleDateString('en-ZA',{day:'2-digit',month:'long',year:'numeric'});
+  const fMed   = dt => dt.toLocaleDateString('en-ZA',{day:'2-digit',month:'short',year:'numeric'});
+  const fShort = dt => dt.toLocaleDateString('en-ZA',{day:'2-digit',month:'short'});
+
+  // Header week label
+  document.getElementById('weekLabel').textContent = `Week of ${fMed(d)} – ${fMed(e)}`;
+  document.getElementById('weekRange').textContent = `${fShort(d)}–${fMed(e)}`;
+
+  // Derive the report date = today if within week, else first day of week
+  const rdi = getReportDayIdx();
+  const reportDate = new Date(d); reportDate.setDate(d.getDate() + rdi);
+  const reportDateStr = fLong(reportDate);
+
+  // Update section 1 date (Fix #2)
+  document.getElementById('snapDate').textContent = reportDateStr;
+  // Update section 4 date (Fix #5)
+  document.getElementById('attnDate').textContent = reportDateStr;
+
+  // Update weekly table column headers (Fix #3 — week reset)
+  for (let di = 0; di < 7; di++) {
+    const th = document.getElementById(`th-${di}`);
+    if (!th) continue;
+    const colDate = new Date(d); colDate.setDate(d.getDate() + di);
+    const isToday = di === rdi;
+    th.textContent = `${DAY_NAMES[di]} ${colDate.getDate()}${isToday ? ' ★' : ''}`;
+    th.style.background = isToday ? 'var(--gold)' : '';
+    th.style.color = isToday ? 'var(--ink)' : '';
+  }
+
+  // Handle week change — save current week data, load (or reset) new week data
+  const newKey = ws;
+  if (currentWeekKey && currentWeekKey !== newKey) {
+    allWeekData[currentWeekKey] = JSON.parse(JSON.stringify(weekData));
+    if (allWeekData[newKey]) {
+      const stored = allWeekData[newKey];
+      Object.keys(weekData).forEach(k => {
+        weekData[k] = stored[k] ? [...stored[k]] : [null,null,null,null,null,null,null];
+      });
+    } else {
+      const fresh = emptyWeek();
+      Object.keys(weekData).forEach(k => { weekData[k] = [...fresh[k]]; });
+    }
+  }
+  currentWeekKey = newKey;
+
+  buildWeekTable();
+  saveState();
+}
+
+// ═══════════════════════════════════════════════════════
+// WEEKLY TRACKER TABLE  (Fix #3, #4 — full rebuild with per-day % calc)
+// ═══════════════════════════════════════════════════════
+function buildWeekTable() {
+  const tbody = document.getElementById('weekTableBody');
+  tbody.innerHTML = '';
+  const rdi = getReportDayIdx();
+
+  WEEK_ROWS.forEach(row => {
+    const tr = document.createElement('tr');
+    let cells = `<td style="font-weight:600;color:#E8F0F8;">${row.label}</td>`;
+
+    for (let di = 0; di < 7; di++) {
+      const isReport = di === rdi;
+      const savedVal = weekData[row.id]?.[di];
+
+      if (row.pct) {
+        // Percentage row — always computed, never editable
+        const computedVal = computeDayPct(row.id, di);
+        cells += `<td class="computed" id="wt-${row.id}-${di}" style="color:${row.color};">${computedVal !== null ? computedVal+'%' : '—'}</td>`;
+      } else if (isReport) {
+        // Report day — auto-synced from KPI (read-only display)
+        const dispVal = savedVal !== null ? savedVal : '—';
+        cells += `<td class="computed" id="wt-${row.id}-${di}" style="font-weight:700;color:${row.color};background:rgba(200,150,42,.10);">${dispVal}</td>`;
+      } else {
+        // Other days — editable inputs
+        const inputVal = savedVal !== null ? savedVal : '';
+        cells += `<td><input type="number" class="cell-num" id="wt-${row.id}-${di}" placeholder="—" value="${inputVal}" min="0" max="999" style="color:${row.color};" oninput="onWeekCellChange('${row.id}',${di},this.value)"></td>`;
+      }
+    }
+
+    cells += `<td class="computed" id="wt-${row.id}-tot" style="color:${row.color};">—</td>`;
+    tr.innerHTML = cells;
+    tbody.appendChild(tr);
+  });
+
+  refreshWeekTable();
+}
+
+// Compute % for a specific row + day index from weekData
+function computeDayPct(rowId, di) {
+  const rdi = getReportDayIdx();
+  if (di === rdi) {
+    // Use live KPI values for the report day
+    const v = getKpiValues();
+    if (rowId === 'health%') return v.total > 0 ? pct(v.healthy, v.total) : null;
+    if (rowId === 'gps%')    return v.gpsTotal > 0 ? pct(v.gps, v.gpsTotal) : null;
+    return null;
+  }
+  // For other days, compute from stored weekData
+  const h = weekData.healthy?.[di]; const u = weekData.unhlth?.[di]; const o = weekData.off?.[di];
+  const g = weekData.gps?.[di];     const ng= weekData.nogps?.[di];
+  if (rowId === 'health%') {
+    if (h == null) return null;
+    const tot = (h||0) + (u||0) + (o||0);
+    return tot > 0 ? pct(h, tot) : null;
+  }
+  if (rowId === 'gps%') {
+    if (g == null) return null;
+    const gt = (g||0) + (ng||0);
+    return gt > 0 ? pct(g, gt) : null;
+  }
+  return null;
+}
+
+function refreshWeekTable() {
+  const rdi = getReportDayIdx();
+  const v = getKpiValues();
+  const reportMap = {
+    total:v.total, healthy:v.healthy, unhlth:v.unhealthy,
+    off:v.off, gps:v.gps, nogps:v.nogps, attn:v.attn,
+  };
+
+  WEEK_ROWS.forEach(row => {
+    // Update report day cell
+    const rdCell = document.getElementById(`wt-${row.id}-${rdi}`);
+    if (rdCell) {
+      if (row.pct) {
+        const cv = computeDayPct(row.id, rdi);
+        rdCell.textContent = cv !== null ? cv+'%' : '—';
+      } else {
+        rdCell.textContent = reportMap[row.id] ?? '—';
+      }
+    }
+
+    // Update % cells for non-report days
+    if (row.pct) {
+      for (let di = 0; di < 7; di++) {
+        if (di === rdi) continue;
+        const cell = document.getElementById(`wt-${row.id}-${di}`);
+        if (cell) {
+          const cv = computeDayPct(row.id, di);
+          cell.textContent = cv !== null ? cv+'%' : '—';
+        }
+      }
+    }
+
+    // Week total / avg
+    const totCell = document.getElementById(`wt-${row.id}-tot`);
+    if (!totCell) return;
+
+    if (row.pct) {
+      // Average the non-null % values
+      let pcts = [], count = 0;
+      for (let di = 0; di < 7; di++) {
+        const cv = computeDayPct(row.id, di);
+        if (cv !== null) { pcts.push(cv); count++; }
+      }
+      totCell.textContent = count > 0 ? Math.round(pcts.reduce((a,b)=>a+b,0)/count)+'%' : '—';
+    } else {
+      let nums = [];
+      for (let di = 0; di < 7; di++) {
+        if (di === rdi) {
+          const rv = reportMap[row.id];
+          if (rv != null && !isNaN(rv)) nums.push(Number(rv));
+        } else {
+          const el = document.getElementById(`wt-${row.id}-${di}`);
+          if (el && el.value !== '') nums.push(Number(el.value));
+        }
+      }
+      totCell.textContent = nums.length > 0 ? nums.reduce((a,b)=>a+b,0) : '—';
+    }
+  });
+
+  // Footer — attention unit totals per day
+  for (let di = 0; di < 7; di++) {
+    const td = document.getElementById(`tf-${di}`);
+    if (!td) continue;
+    if (di === rdi) {
+      td.textContent = v.attn || '—';
+    } else {
+      const el = document.getElementById(`wt-attn-${di}`);
+      td.textContent = (el && el.value !== '') ? el.value : '—';
+    }
+  }
+  // Footer total
+  let attnSum = 0, attnCount = 0;
+  for (let di = 0; di < 7; di++) {
+    if (di === rdi) { if (v.attn) { attnSum += v.attn; attnCount++; } }
+    else { const el = document.getElementById(`wt-attn-${di}`); if (el && el.value !== '') { attnSum += Number(el.value); attnCount++; } }
+  }
+  document.getElementById('tf-total').textContent = attnCount > 0 ? attnSum : '—';
+}
+
+function onWeekCellChange(rowId, dayIndex, value) {
+  if (!weekData[rowId]) weekData[rowId] = [null,null,null,null,null,null,null];
+  weekData[rowId][dayIndex] = value === '' ? null : Number(value);
+  // Update weekly chart
+  const dsMap = {healthy:0, unhlth:1, off:2, gps:3, attn:4};
+  if (charts.weekly && dsMap[rowId] !== undefined) {
+    charts.weekly.data.datasets[dsMap[rowId]].data[dayIndex] = value===''?null:Number(value);
+    charts.weekly.update();
+  }
+  refreshWeekTable();
+  saveState();
+}
+
+// ═══════════════════════════════════════════════════════
+// ATTENTION TABLE  (Fix #6 — attn count always = attnRows.length)
+// ═══════════════════════════════════════════════════════
+function buildAttnTable() {
+  const tbody = document.getElementById('attnBody');
+  tbody.innerHTML = '';
+  attnRows.forEach((row,i) => tbody.appendChild(makeAttnRow(row,i)));
+  syncAttnCount();
+  updateAttnChart();
+}
+
+function makeAttnRow(row,i) {
+  const tr = document.createElement('tr');
+  tr.dataset.idx = i;
+  const sevOpts = ['warn','bad'].map(s =>
+    `<option value="${s}"${row.sev===s?'selected':''}>${s==='bad'?'Red — Critical':'Amber'}</option>`
+  ).join('');
+  tr.innerHTML = `
+    <td><span class="attn-editable" contenteditable="true" onblur="attnRows[${i}].ref=this.textContent;saveState();updateObservations();" style="font-family:'DM Mono',monospace;font-size:11px;">${row.ref}</span></td>
+    <td><span class="attn-editable" contenteditable="true" onblur="attnRows[${i}].site=this.textContent;saveState();updateObservations();">${row.site}</span></td>
+    <td><span class="attn-editable badge ${row.sev}" contenteditable="true" onblur="attnRows[${i}].issue=this.textContent;saveState();">${row.issue}</span></td>
+    <td><span class="attn-editable" contenteditable="true" onblur="attnRows[${i}].detail=this.textContent;saveState();updateObservations();">${row.detail}</span></td>
+    <td>
+      <select class="sev-select" onchange="attnRows[${i}].sev=this.value;buildAttnTable();updateObservations();saveState();">
+        ${sevOpts}
+      </select>
+    </td>
+    <td><span class="attn-editable" contenteditable="true" onblur="attnRows[${i}].action=this.textContent;saveState();updateObservations();">${row.action}</span></td>
+    <td><button class="row-btn" title="Remove row" onclick="removeAttnRow(${i})">✕</button></td>
+  `;
+  return tr;
+}
+
+function addAttnRow() {
+  attnRows.push({ref:'NCRXXXX',site:'New Site',issue:'Issue Type',detail:'Describe the issue here.',sev:'warn',action:'Action required'});
+  buildAttnTable();
+  syncAttnCount();
+  updateAll();
+  updateObservations();
+  saveState();
+}
+
+function removeAttnRow(i) {
+  attnRows.splice(i,1);
+  buildAttnTable();
+  syncAttnCount();
+  updateAll();
+  updateObservations();
+  saveState();
+}
+
+// Sync k-attn display to actual attnRows count (Fix #6)
+function syncAttnCount() {
+  setKpiDisplay('k-attn', attnRows.length);
+}
+
+function updateAttnChart() {
+  if (!charts.attn) return;
+  const labels = attnRows.map(r => r.ref+'\n'+(r.site||'').replace('NCR ','').substring(0,14));
+  const scores = attnRows.map(r => r.sev==='bad'?3:2);
+  const colors = attnRows.map(r => r.sev==='bad'?COLOR.BAD:COLOR.WARN);
+  charts.attn.data.labels = labels.length ? labels : ['No units'];
+  charts.attn.data.datasets[0].data = scores.length ? scores : [0];
+  charts.attn.data.datasets[0].backgroundColor = colors.length ? colors : [COLOR.WARN];
+  charts.attn.update();
+}
+
+// ═══════════════════════════════════════════════════════
+// ACTIVE SITES TABLE  (Fix #1 — triggers KPI recompute on status change)
+// ═══════════════════════════════════════════════════════
+function buildSitesTable() {
+  const tbody = document.getElementById('sitesBody');
+  tbody.innerHTML = '';
+  sitesRows.forEach((row,i) => tbody.appendChild(makeSiteRow(row,i)));
+  updateSiteCount();
+}
+
+function makeSiteRow(row,i) {
+  const tr = document.createElement('tr');
+  const statusOpts = ['ok','warn','bad','off'].map(s =>
+    `<option value="${s}"${row.status===s?'selected':''}>${s==='ok'?'Active':s==='warn'?'Warning':s==='bad'?'Offline':'Switched Off'}</option>`
+  ).join('');
+  tr.innerHTML = `
+    <td><span class="attn-editable" contenteditable="true" onblur="sitesRows[${i}].ref=this.textContent;saveState();" style="font-family:'DM Mono',monospace;font-size:11px;">${row.ref}</span></td>
+    <td><span class="attn-editable" contenteditable="true" onblur="sitesRows[${i}].name=this.textContent;saveState();">${row.name}</span></td>
+    <td><span class="attn-editable" contenteditable="true" onblur="sitesRows[${i}].addr=this.textContent;saveState();" style="font-size:11px;">${row.addr}</span></td>
+    <td>
+      <select class="sev-select" onchange="sitesRows[${i}].status=this.value;sitesRows[${i}].statusLabel=this.options[this.selectedIndex].text;buildSitesTable();computeKpiFromSites();saveState();">
+        ${statusOpts}
+      </select>
+      &nbsp;<span class="badge ${row.status}">${row.statusLabel}</span>
+    </td>
+    <td><button class="row-btn" title="Remove" onclick="removeSiteRow(${i})">✕</button></td>
+  `;
+  return tr;
+}
+
+function addSiteRow() {
+  sitesRows.push({ref:'NCRB0000',name:'New Site Name',addr:'Address, City, Province',status:'ok',statusLabel:'Active'});
+  buildSitesTable();
+  computeKpiFromSites();
+  saveState();
+}
+
+function removeSiteRow(i) {
+  sitesRows.splice(i,1);
+  buildSitesTable();
+  computeKpiFromSites();
+  saveState();
+}
+
+function updateSiteCount() {
+  const count = sitesRows.length;
+  document.getElementById('siteCount').textContent = count;
+  document.getElementById('sb-sites').textContent  = count+' total';
+}
+
+// ═══════════════════════════════════════════════════════
+// SECTION 6 — AUTO-UPDATING OBSERVATION BLOCKS  (Fix #7, #8, #9)
+// ═══════════════════════════════════════════════════════
+function updateObservations() {
+  const v = getKpiValues();
+
+  // --- AMBER UNITS (from attnRows where sev='warn') ---
+  const amberUnits = attnRows.filter(r => r.sev === 'warn');
+  const amberEl = document.getElementById('obs-amber-content');
+  if (amberEl) {
+    if (amberUnits.length === 0) {
+      amberEl.innerHTML = '<p class="obs-auto-p" style="font-style:italic;">No amber units at this time. All sites are reporting normally.</p>';
+    } else {
+      amberEl.innerHTML = amberUnits.map(u =>
+        `<p class="obs-auto-p"><strong style="color:var(--ink);">${u.ref}</strong> — ${(u.site||'').replace('NCR ','')}:<br>
+        <span style="color:var(--warn);">${u.issue}</span> · ${u.detail}<br>
+        <em>Action: ${u.action}</em></p>`
+      ).join('');
+    }
+  }
+
+  // --- OFFLINE / CRITICAL UNITS (from attnRows sev='bad' + sites status='bad') ---
+  const critAttn = attnRows.filter(r => r.sev === 'bad');
+  const critSites = sitesRows.filter(r => r.status === 'bad');
+  // Merge by ref, attn rows take priority for detail
+  const seenRefs = new Set();
+  const allCrit = [];
+  critAttn.forEach(u => { seenRefs.add(u.ref); allCrit.push({ref:u.ref,name:u.site,reason:`${u.issue}: ${u.detail}`,action:u.action}); });
+  critSites.forEach(s => { if (!seenRefs.has(s.ref)) allCrit.push({ref:s.ref,name:s.name,reason:`Offline — ${s.statusLabel}`,action:'Investigate and restore connectivity'}); });
+
+  const offlineEl = document.getElementById('obs-offline-content');
+  if (offlineEl) {
+    if (allCrit.length === 0) {
+      offlineEl.innerHTML = '<p class="obs-auto-p" style="font-style:italic;">No offline or critical units at this time.</p>';
+    } else {
+      offlineEl.innerHTML = allCrit.map(u =>
+        `<p class="obs-auto-p"><strong style="color:var(--ink);">${u.ref}</strong> — ${(u.name||'').replace('NCR ','')}:<br>
+        <span style="color:var(--bad);">${u.reason}</span><br>
+        <em>Action: ${u.action}</em></p>`
+      ).join('');
+    }
+  }
+
+  // --- GPS SIGNAL HEALTH ---
+  const gpsEl = document.getElementById('obs-gps-content');
+  if (gpsEl) {
+    const gpsRate = pct(v.gps, v.gpsTotal);
+    const gpsStatus = gpsRate >= 90 ? '✅ Excellent' : gpsRate >= 75 ? '🟡 Acceptable' : '🔴 Below Target';
+    gpsEl.innerHTML = `<p class="obs-auto-p">${v.gps} of ${v.gpsTotal} units are reporting valid GPS positions — <strong>${gpsRate}%</strong> GPS availability (${gpsStatus}).<br>
+    ${v.nogps > 0 ? `<span style="color:var(--bad);">${v.nogps} unit(s) have no GPS data</span> — check device health, antenna connections, and confirm vehicle is in an open area.` : 'All connected units are reporting GPS positions correctly.'}</p>`;
+  }
+
+  // --- FLEET HEALTH POSITIVE ---
+  const hr = pct(v.healthy, v.total);
+  const gr = pct(v.gps, v.gpsTotal);
+  const titleEl = document.getElementById('obsGoodTitle');
+  const textEl  = document.getElementById('obsGoodText');
+  if (titleEl) titleEl.textContent = `🟢 ${hr}% Fleet Health — ${hr>=85?'Positive':'Needs Attention'}`;
+  if (textEl)  textEl.textContent  = `${v.healthy} of ${v.total} units are healthy and fully connected. GPS signal is reporting correctly on ${gr}% of the fleet. The fleet health rate is ${hr>=85?'above':'below'} the recommended 85% minimum threshold for this reporting period. Continue monitoring and update the weekly trend daily to track any deterioration.`;
+
+  // --- SWITCHED OFF A/H ---
+  const swOffSites = sitesRows.filter(r => r.status === 'off');
+  const swOffEl = document.getElementById('obs-switchedoff-content');
+  if (swOffEl) {
+    if (swOffSites.length === 0 && v.off === 0) {
+      swOffEl.innerHTML = '<p class="obs-auto-p" style="font-style:italic;">No units currently switched off after hours.</p>';
+    } else {
+      const swOffCount = v.off;
+      swOffEl.innerHTML = `<p class="obs-auto-p">${swOffCount} unit(s) currently switched off after hours.</p>` +
+        (swOffSites.length ? swOffSites.map(s =>
+          `<p class="obs-auto-p"><strong style="color:var(--ink);">${s.ref}</strong> — ${s.name.replace('NCR ','')}: <span style="color:var(--off);">Switched Off</span></p>`
+        ).join('') : '');
+    }
+  }
+
+  // --- FLEET OVERVIEW ---
+  const fleetEl = document.getElementById('obs-fleet-content');
+  if (fleetEl) {
+    const warnSites = sitesRows.filter(r => r.status === 'warn');
+    fleetEl.innerHTML = `<p class="obs-auto-p">
+      <strong>${sitesRows.length}</strong> total sites monitored.<br>
+      <span style="color:var(--ok);">✅ ${v.healthy} Active/Healthy</span> &nbsp;·&nbsp;
+      <span style="color:var(--warn);">🟡 ${warnSites.length} Warning</span> &nbsp;·&nbsp;
+      <span style="color:var(--bad);">❌ ${v.unhealthy} Offline</span> &nbsp;·&nbsp;
+      <span style="color:var(--off);">🔴 ${v.off} Switched Off</span><br>
+      <strong>${attnRows.length}</strong> unit(s) currently requiring active attention.
+    </p>`;
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// MANUAL OBSERVATION BOXES (user-added)
+// ═══════════════════════════════════════════════════════
+function getObsFromDOM() {
+  const boxes = document.querySelectorAll('#obsGrid .obs-box');
+  return Array.from(boxes).map(box => ({
+    cls:   box.className.replace('obs-box','').trim(),
+    title: box.querySelector('strong') ? box.querySelector('strong').textContent : '',
+    text:  box.querySelector('p') ? box.querySelector('p').textContent : '',
+  }));
+}
+
+function buildObsFromData(obsArr) {
+  const grid = document.getElementById('obsGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  obsArr.forEach(o => {
+    const div = document.createElement('div');
+    div.className = 'obs-box' + (o.cls ? ' ' + o.cls : '');
+    div.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;">
+        <strong contenteditable="true" class="editable" onblur="saveState()">${o.title}</strong>
+        <button class="row-btn" onclick="removeObsBox(this)" style="flex-shrink:0;">✕</button>
+      </div>
+      <p contenteditable="true" class="editable" onblur="saveState()">${o.text}</p>
+    `;
+    grid.appendChild(div);
+  });
+}
+
+function addObsBox() {
+  const obs = getObsFromDOM();
+  obs.push({cls:'', title:'🔵 New Observation', text:'Enter observation details here.'});
+  buildObsFromData(obs);
+  saveState();
+}
+
+function removeObsBox(btn) {
+  btn.closest('.obs-box').remove();
+  saveState();
+}
+
+// ═══════════════════════════════════════════════════════
+// CHARTS INIT
+// ═══════════════════════════════════════════════════════
+function initCharts() {
+  const {OK,BAD,WARN,OFF,TEAL} = COLOR;
+  const v = getKpiValues();
+
+  charts.conn = new Chart(document.getElementById('cConn'), {
+    type:'doughnut',
+    data:{labels:['Healthy','Unhealthy','Switched Off A/H'],
+      datasets:[{data:[v.healthy,v.unhealthy,v.off],backgroundColor:[OK,BAD,OFF],borderWidth:2,borderColor:'#fff',hoverOffset:5}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
+      plugins:{legend:{position:'bottom',labels:{font:{size:10},color:'#475569',padding:12}}}}
+  });
+
+  charts.gps = new Chart(document.getElementById('cGps'), {
+    type:'doughnut',
+    data:{labels:['GPS OK','No GPS Data'],
+      datasets:[{data:[v.gps,v.nogps],backgroundColor:[OK,BAD],borderWidth:2,borderColor:'#fff',hoverOffset:5}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
+      plugins:{legend:{position:'bottom',labels:{font:{size:10},color:'#475569',padding:12}}}}
+  });
+
+  charts.fleet = new Chart(document.getElementById('cFleet'), {
+    type:'bar',
+    data:{labels:['Healthy','Unhealthy','Switched Off','No GPS'],
+      datasets:[{data:[v.healthy,v.unhealthy,v.off,v.nogps],backgroundColor:[OK,BAD,OFF,WARN],borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{x:{grid:{display:false},ticks:{color:'#90A4AE',font:{size:10}}},
+        y:{grid:{color:'rgba(255,255,255,.06)'},ticks:{color:'#90A4AE',font:{size:10},stepSize:5}}},
+      animation:{
+        onComplete: function() {
+          const chart = this;
+          const ctx = chart.ctx;
+          ctx.save();
+          ctx.textAlign = 'center';
+          chart.data.datasets.forEach((dataset, datasetIndex) => {
+            const meta = chart.getDatasetMeta(datasetIndex);
+            meta.data.forEach((bar, index) => {
+              const val = dataset.data[index];
+              if (!val || val === 0) return;
+              const top = bar.y, bottom = bar.base !== undefined ? bar.base : bar.y + bar.height;
+              const barH = bottom - top;
+              if (barH >= 14) {
+                ctx.font = 'bold 9px DM Sans, sans-serif';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = 'rgba(255,255,255,0.95)';
+                ctx.fillText(val, bar.x, top + barH / 2);
+              } else if (barH > 0) {
+                ctx.font = 'bold 8px DM Sans, sans-serif';
+                ctx.textBaseline = 'bottom';
+                ctx.fillStyle = 'rgba(255,255,255,0.85)';
+                ctx.fillText(val, bar.x, top - 1);
+              }
+            });
+          });
+          ctx.restore();
+        }
+      }
+    }
+  });
+
+  charts.attn = new Chart(document.getElementById('cAttn'), {
+    type:'bar',
+    data:{labels:['No units'],datasets:[{label:'Severity Score',data:[0],backgroundColor:[WARN],borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{const m=['','Amber','Amber — Power + No Move','Red — Critical'];return m[ctx.parsed.x]||'';} }}},
+      scales:{x:{grid:{color:'rgba(255,255,255,.06)'},ticks:{display:false},max:4},
+        y:{grid:{display:false},ticks:{color:'#90A4AE',font:{size:9}}}},
+      animation:{
+        onComplete: function() {
+          const chart = this;
+          const ctx = chart.ctx;
+          ctx.save();
+          ctx.font = 'bold 9px DM Sans, sans-serif';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          chart.data.datasets.forEach((dataset, di) => {
+            const meta = chart.getDatasetMeta(di);
+            meta.data.forEach((bar, index) => {
+              const val = dataset.data[index];
+              if (!val || val === 0) return;
+              ctx.fillStyle = 'rgba(255,255,255,0.9)';
+              ctx.fillText(val, bar.x + 4, bar.y);
+            });
+          });
+          ctx.restore();
+        }
+      }
+    }
+  });
+
+  charts.ratio = new Chart(document.getElementById('cRatio'), {
+    type:'bar',
+    data:{labels:['Fleet ('+v.total+' units)'],
+      datasets:[
+        {label:'Healthy',data:[v.healthy],backgroundColor:OK,borderWidth:0},
+        {label:'Unhealthy',data:[v.unhealthy],backgroundColor:BAD,borderWidth:0},
+        {label:'Switched Off',data:[v.off],backgroundColor:OFF,borderWidth:0},
+        {label:'No GPS',data:[v.nogps],backgroundColor:WARN,borderWidth:0},
+      ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'right',labels:{font:{size:10},color:'#475569',padding:10}}},
+      scales:{
+        x:{stacked:true,grid:{display:false},ticks:{color:'#64748B',font:{size:10}}},
+        y:{stacked:true,grid:{color:'rgba(0,0,0,.06)'},ticks:{color:'#64748B',font:{size:10},stepSize:5}}}}
+  });
+
+  const ws = document.getElementById('weekStart').value;
+  const d0 = new Date(ws+'T00:00:00');
+  const WDAYS = Array.from({length:7},(_,i)=>{
+    const dd=new Date(d0);dd.setDate(d0.getDate()+i);
+    return DAY_NAMES[i]+' '+dd.getDate();
+  });
+
+  charts.weekly = new Chart(document.getElementById('cWeekly'), {
+    type:'bar',
+    data:{labels:WDAYS,
+      datasets:[
+        {label:'Healthy Units',data:[...weekData.healthy],backgroundColor:OK,borderWidth:0,stack:'stack'},
+        {label:'Unhealthy',data:[...weekData.unhlth],backgroundColor:BAD,borderWidth:0,stack:'stack'},
+        {label:'Switched Off A/H',data:[...weekData.off],backgroundColor:OFF,borderWidth:0,stack:'stack'},
+        {type:'line',label:'GPS OK',data:[...weekData.gps],borderColor:TEAL,backgroundColor:'transparent',borderWidth:2.5,pointRadius:5,pointBackgroundColor:TEAL,tension:0.2,yAxisID:'y2'},
+        {type:'line',label:'Attention Required',data:[...weekData.attn],borderColor:WARN,backgroundColor:'transparent',borderWidth:2.5,pointRadius:5,pointBackgroundColor:WARN,borderDash:[6,3],tension:0.2,yAxisID:'y2'},
+      ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{font:{size:10},color:'#90A4AE',padding:10}}},
+      scales:{
+        x:{stacked:true,grid:{display:false},ticks:{color:'#90A4AE',font:{size:10}}},
+        y:{stacked:true,grid:{color:'rgba(255,255,255,.06)'},min:0,max:40,ticks:{color:'#90A4AE',font:{size:10},stepSize:5},title:{display:true,text:'Units (stacked)',color:'#90A4AE',font:{size:9}}},
+        y2:{position:'right',min:0,max:40,grid:{display:false},ticks:{color:'#90A4AE',font:{size:10},stepSize:5},title:{display:true,text:'GPS / Attention',color:'#90A4AE',font:{size:9}}}
+      },
+      animation:{
+        onComplete: function() {
+          const chart = this;
+          const ctx = chart.ctx;
+          ctx.save();
+          ctx.textAlign = 'center';
+          chart.data.datasets.forEach((dataset, datasetIndex) => {
+            const meta = chart.getDatasetMeta(datasetIndex);
+            meta.data.forEach((bar, index) => {
+              const val = dataset.data[index];
+              if (!val || val === 0) return;
+              if (dataset.type === 'line') return; // skip line datasets
+              const top = bar.y, bottom = bar.base !== undefined ? bar.base : bar.y + bar.height;
+              const barH = bottom - top;
+              if (barH >= 14) {
+                ctx.font = 'bold 9px DM Sans, sans-serif';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = 'rgba(255,255,255,0.95)';
+                ctx.fillText(val, bar.x, top + barH / 2);
+              } else if (barH > 0) {
+                ctx.font = 'bold 8px DM Sans, sans-serif';
+                ctx.textBaseline = 'bottom';
+                ctx.fillStyle = 'rgba(255,255,255,0.85)';
+                ctx.fillText(val, bar.x, top - 1);
+              }
+            });
+          });
+          ctx.restore();
+        }
+      }
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// PERSISTENCE
+// ═══════════════════════════════════════════════════════
+function saveState() {
+  const state = {
+    weekStart:    document.getElementById('weekStart').value,
+    currentWeekKey,
+    allWeekData:  JSON.parse(JSON.stringify(allWeekData)),
+    weekData:     JSON.parse(JSON.stringify(weekData)),
+    attnRows:     JSON.parse(JSON.stringify(attnRows)),
+    sitesRows:    JSON.parse(JSON.stringify(sitesRows)),
+    obs:          getObsFromDOM(),
+    savedAt:      new Date().toISOString(),
+  };
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    showSaveFeedback();
+  } catch(e) { console.warn('Save failed',e); }
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch(e) { return null; }
+}
+
+function clearState() {
+  if (!confirm('Reset all data to defaults? This cannot be undone.')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  location.reload();
+}
+
+function applyState(s) {
+  if (s.weekStart) document.getElementById('weekStart').value = s.weekStart;
+  if (s.currentWeekKey) currentWeekKey = s.currentWeekKey;
+  // Merge allWeekData — always ensure the default week data is present
+  allWeekData = s.allWeekData || {};
+  if (!allWeekData[DEFAULTS.weekStart]) {
+    allWeekData[DEFAULTS.weekStart] = JSON.parse(JSON.stringify(DEFAULTS.weekData));
+  }
+  if (s.weekData) {
+    Object.keys(weekData).forEach(k => { if (s.weekData[k]) weekData[k] = s.weekData[k]; });
+  } else if (allWeekData[currentWeekKey]) {
+    Object.keys(weekData).forEach(k => {
+      weekData[k] = allWeekData[currentWeekKey][k] ? [...allWeekData[currentWeekKey][k]] : [null,null,null,null,null,null,null];
+    });
+  }
+  if (s.attnRows)  attnRows  = s.attnRows;
+  if (s.sitesRows) sitesRows = s.sitesRows;
+  if (s.obs) buildObsFromData(s.obs);
+  if (s.savedAt) {
+    const d = new Date(s.savedAt);
+    const el = document.getElementById('lastSaved');
+    if (el) el.textContent = 'Last saved: ' + d.toLocaleString('en-ZA');
+  }
+}
+
+function showSaveFeedback() {
+  const btn = document.getElementById('saveBtn');
+  if (!btn) return;
+  btn.textContent = '✓ SAVED';
+  btn.style.background = 'var(--ok)';
+  setTimeout(()=>{ btn.textContent = '💾 SAVE'; btn.style.background = 'var(--gold)'; }, 1800);
+}
+
+// ═══════════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = loadState();
+  if (saved) {
+    applyState(saved);
+  } else {
+    attnRows       = JSON.parse(JSON.stringify(DEFAULTS.attnRows));
+    sitesRows      = JSON.parse(JSON.stringify(DEFAULTS.sitesRows));
+    currentWeekKey = DEFAULTS.weekStart;
+    // Pre-populate the weekly tracker with the full 7-day data from the report
+    Object.keys(DEFAULTS.weekData).forEach(k => {
+      weekData[k] = [...DEFAULTS.weekData[k]];
+    });
+    // Store it in allWeekData so switching weeks preserves it
+    allWeekData[DEFAULTS.weekStart] = JSON.parse(JSON.stringify(DEFAULTS.weekData));
+    buildObsFromData(DEFAULTS.obs);
+  }
+
+  // Init charts first (with zeros), then populate
+  initCharts();
+
+  // Refresh header (sets dates, week column headers)
+  refreshHeader();
+
+  // Build tables
+  buildAttnTable();
+  buildSitesTable();
+  buildWeekTable();
+
+  // Derive KPI from sites register → triggers updateAll → updateObservations
+  computeKpiFromSites();
+});
+
+// Auto-save contenteditable blurs
+document.addEventListener('blur', e => {
+  if (e.target.classList.contains('editable') || e.target.classList.contains('attn-editable')) {
+    saveState();
+  }
+}, true);
+</script>
+</body>
+</html>
+
